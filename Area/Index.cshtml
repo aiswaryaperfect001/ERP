@@ -1,0 +1,330 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+    
+}
+
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-lg-12" id="area-form">
+
+        </div>
+    </div>
+</div>
+
+@section scripts{
+
+<script>
+        const $formContainer = $('#area-form');
+
+        $(document).ready(function () {
+            //$('#area-form').load("@Url.Action("LoadAreaForm", "Area")");
+
+           // loadAreaList();
+           // fn_loadAreaAddForm();
+           // loadAreaList();
+            areaInitialLoad();
+        });
+        function fn_loadAreaAddForm() {
+
+
+            $formContainer.load('@Url.Action("LoadAreaForm", "Area")', function () {
+                let $thisForm = $(this).find('[perfect-class="form"]');
+                $thisForm.validate({ messages: validationMessage });
+                $thisForm.attr('perfect-onFormSuccess', 'areaInitialLoad');
+            });
+
+        };
+        function areaInitialLoad() {
+
+
+            fn_loadAreaAddForm();
+              @if (ViewBag.PagedAccessRights.UsrrlMsView)
+              {
+                 <text> loadAreaList(); </text>
+              }
+                 @*$('#area-form').load('@Url.Action("GetAreaList", "Area")', function () {
+
+                     let $thisForm = $(this).find('[perfect-class="form"]');
+                     alert($thisForm);
+                     $thisForm.attr('perfect-onFormSuccess', 'areaInitialLoad');
+                     $('#area-form').load("@Url.Action("LoadAreaForm", "Area")");
+        });*@
+        }
+
+        var validationMessage = {
+            'AreaName': {
+                'required': 'Please Enter Name',
+                'stringonly': 'Invalid Name selected',
+
+            },
+            'AreaShortName': {
+                'required': 'Please Enter Short Name',
+                'alphanumeric': 'Invalid  Short Name selected',
+
+            },
+
+            'DistrictID': {
+                'required': 'Please select a District',
+                'stringonly': 'Invalid District selected',
+
+            },
+
+        }
+
+
+        function loadAreaList() {
+            let $sidemenu = $sideMenuOptions.body;
+            $sideMenuOptions.title.find('h4').text('Area List');
+
+            $.ajax({
+                url: "@Url.Action("GetAreaList", "Area")",
+                type: "Get",
+                headers: { "token_key": "1234" },
+                //data: { branchID: id },
+                dataType: "json",
+                contentType: "application/json",
+                success: function (data) {
+
+                    if (data.Process.IsProcess) {
+
+                        $.each(data.Process.Message, function (key, value) {
+                            //toastr.success(value, "Success");
+                            //NotificationMessage({ 'type': 'success', 'heading': 'Success', 'message': value });
+                        });
+                    }
+                    else {
+                        $.each(data.Process.Message, function (key, value) {
+                           // toastr.warning(value, "Error");
+                            NotificationMessage({ 'type': 'error', 'heading': 'Error', 'message': value });
+                        });
+                    }
+
+                    console.log('area', data);
+                    $sidemenu.find('.jq_sidemenu_title').text("area list");
+
+                    $sidemenu.html(pft_table_createtable(data.Data, tableOptions))
+                    $sidemenu.find('table').dataTable({ paging: true, pageLength: 15, lengthMenu: [[ 10,15,20, -1], [10, 15, 20, 'Todos']]});
+
+
+                },
+                complete: function () {
+
+                }
+            });
+        }
+
+        var tableOptions = {
+            dropdown: {
+                buttons: [
+
+               @if (ViewBag.PagedAccessRights.UsrrlMsView) {
+        <text>{ displayName: "View", action: editArea },</text>
+    }
+
+                    { type: "divider" },
+     @if (ViewBag.PagedAccessRights.UsrrlMsDel)
+             {
+                 <text> {displayName: "Delete", action: deleteArea},</text>
+
+              }
+                ],
+                class: "btn btn-success light sharp"
+            },
+            hideColumn: ["FK_Machine", "AuditData", "District", "DistrictID", "BackupId", "BranchCode", "Cancelled", "FK_District", "EntrBy", "ReasonID", "FK_BranchCodeUser", "FK_Company", "FK_Machine", "FK_Reason", "ID_Area", "SortOrder", "SqlUpdateQuery", "UserAction", "UserCode", "FK_Branch", "FK_Area", "TransMode","TypeID"],
+            rowClickAction: editArea,
+            serialNo: true,
+            renameHeader: { "SlNo": "SL NO","AreaName": "Name", "AreaShortName":"ShortName"}
+        };
+            function editArea() {
+            let row = $(this).closest('tr');
+
+            let Saveddata = row.data('pData');
+                $('.dataTable tr').removeClass("SelectForDelete");
+                $(this).closest('tr').addClass('SelectForDelete');
+
+            let inputData = {
+                ID_Area: Saveddata.ID_Area
+
+            };
+
+            $.ajax({
+                        url: '@Url.Action("GetAreaByID", "Area")',
+                        type: "POST",
+
+                        data: JSON.stringify(inputData),
+                        dataType: "json",
+                        contentType: "application/json",
+                        success: function (ajaxOutput) {
+
+                        console.log("Return", ajaxOutput.Data[0]);
+                            if (ajaxOutput.Process.IsProcess)
+                            {
+
+                                //console.log('>_ Inside GetAreaInfoByID', data)
+
+                                $sideMenuOptions.close();
+
+                                $('#area-form').load("@Url.Action("LoadAreaForm", "Area")", function () {
+
+                                    $(this).find('[perfect-class=formTitle]').text('update : ' + ajaxOutput.Data[0].AreaName)
+                                    console.log('Inside load');
+
+                                    let $thisForm = $(this).find('[perfect-class="form"]');
+
+                                    $thisForm.data({ pData: ajaxOutput.Data[0] });
+                                    $thisForm.attr('perfect-onFormSuccess', 'areaInitialLoad');
+
+                                    $thisForm.find('button[name=add]').addClass('d-none');
+                                    $thisForm.find('button[name=update]').removeClass('d-none');
+                                    $thisForm.find('[name="AreaShortName"]').val(ajaxOutput.Data[0].AreaShortName),
+                                    $thisForm.find('[name="AreaName"]').val(ajaxOutput.Data[0].AreaName),
+
+                                        $thisForm.find('[name="DistrictID"]').val(ajaxOutput.Data[0].DistrictID).selectpicker('refresh'),
+                                        $thisForm.find('[name="District"]').val(ajaxOutput.Data[0].District),
+                                        $thisForm.find('[name="TypeID"]').val(ajaxOutput.Data[0].TypeID).selectpicker('refresh'),
+                                        $thisForm.find('[name="SortOrder"]').val(ajaxOutput.Data[0].SortOrder)
+                                });
+                            }
+                            else {
+                                console.log('>_ Inside GetStateInfo :false')
+
+                                $.each(ajaxOutput.Process.Message, function (key, value)
+                                {
+                                    NotificationMessage({ 'type': 'error', 'heading': 'Error', 'message': value });
+                                    $('.dataTable tr').removeClass("SelectForDelete");
+                                });
+                            }
+                },
+
+            });
+
+        }
+         function getArea(ele) {
+        let $thisForm = $(ele).closest('[perfect-class="form"]');
+
+        $.ajax({
+            url: '@Url.Action("GetArea", "Area")',
+            type: "GET",
+            // headers: { "token_key": "1234" },
+            //data: JSON.stringify(inputData),//<---- Input json : data passed to controller
+            dataType: "json",
+            contentType: "application/json",
+            success: function (ajaxOutput) {//<----- if ajax method executed succesfully,  we get the data passed from controller in this variable  => success: function (variable) {
+                // console.log("Data", data);
+
+                if (ajaxOutput.Process.IsProcess) {
+                    var stateModel = createSelectList({ data: ajaxOutput.Data, hideColumn: ['ID_Area'] });
+                    stateModel.then(function (ret) {
+                        if (ret) {
+                            console.log('>_ Search button > list click', ret);
+                            $thisForm.find('[name=ID_Area]').val(ret.ID_Area);
+                            $thisForm.find('[name=Area]').val(ret.AreaName);
+                        }
+                        else {
+                            console.log(ret);
+                        }
+                    });
+                }
+                else {
+                    $.each(ajaxOutput.Process.Message, function (key, value) {
+                        NotificationMessage({ 'type': 'error', 'heading': 'Error', 'message': value });
+                    });
+                }
+
+            },
+
+        });
+    }
+
+         function deleteArea() {
+             let $row = $(this).closest('tr');
+            let Saveddata = $row.data('pData');
+
+             $('.dataTable tr').removeClass("SelectForDelete");
+             $(this).closest('tr').addClass('SelectForDelete');
+
+            console.log('Delete function', Saveddata)
+
+            //get reason list-
+
+               $.ajax({
+                   url: "@Url.Action("GetAreaReasonList", "Area")",
+                   type: "GET",
+                  // data: inputReason,
+                   contentType: 'application/x-www-form-urlencoded; charset=utf-8',
+                   success: function (ajaxReasonOutput) {
+                       if (ajaxReasonOutput.Process.IsProcess) {
+
+                           console.log('Inside res ajax', ajaxReasonOutput.Data)
+
+                           let confirmationDialogBoxOption = { heading: "Are you Sure?", body: "Do you want to remove "+ Saveddata.AreaName + "?", cancel: "No", confirm: "Yes", reason: ajaxReasonOutput.Data };
+                          var confirmBoxObj = ConfirmDialog(confirmationDialogBoxOption);
+                          // let confirmationDialogBoxOption = { heading: "Are you Sure?", body: "Do you want to remove " + Saveddata.AreaName + " ?", cancel: "No", confirm: "Yes", reason: ajaxReasonOutput.Data };
+                          // var confirmBoxObj = ConfirmDialog(confirmationDialogBoxOption);
+
+                            confirmBoxObj.then(function (selectedOption) {
+                                if (selectedOption) {
+                                     console.log('Product> delete function:',selectedOption)
+
+                                    let inputData = {
+                                        __RequestVerificationToken: $('[name="__RequestVerificationToken"]').val(),
+                                        ID_Area: Saveddata['ID_Area'],
+                                        ReasonID: selectedOption
+                                    };
+                                    $.ajax({
+                                        url: "@Url.Action("DeleteArea", "Area")",
+                                        type: "POST",
+                                        data: inputData,
+                                        contentType: 'application/x-www-form-urlencoded; charset=utf-8',
+                                        success: function (ajaxOutput) {
+                                            if (ajaxOutput.Process.IsProcess) {
+
+                                                let table = $row.closest('table').DataTable()
+                                                table.row($row).remove().draw();
+
+                                                $.each(ajaxOutput.Process.Message, function (key, value) {
+                                                    NotificationMessage({ 'type': 'success', 'heading': 'Success', 'message': 'Deleted Successfully' });
+                                                });
+
+                                                //removing a data
+                                                $('.dataTable tr').removeClass("SelectForDelete");
+
+                                            }
+                                            else {
+                                                $.each(ajaxOutput.Process.Message, function (key, value) {
+                                                    NotificationMessage({ 'type': 'error', 'heading': 'Error', 'message': value });
+                                                    $('.dataTable tr').removeClass("SelectForDelete");
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                                else {
+                                    NotificationMessage({ 'message': 'No option selected' });
+                                }
+
+                            });
+
+
+                        }
+                        else {
+
+
+
+                        }
+                   }
+
+               });
+
+
+
+
+        };
+  
+        
+</script>
+
+}
+
